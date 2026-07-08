@@ -1,17 +1,15 @@
-# MoveTech Git Lab
+# 🚀 MoveTech Git Lab
 
 Bem-vindo ao laboratório colaborativo.
 
-Todos os participantes trabalharão neste mesmo repositório utilizando o fluxo de trabalho do GitHub.
+Todos os participantes trabalharão neste mesmo repositório utilizando o fluxo de trabalho do [GitHub](https://github.com/).
 
-Regras:
+## 📋 Regras
 
-- Nunca trabalhar diretamente na main
-- Sempre criar uma Branch
-- Criar Pull Request
-- Aguardar aprovação
-- Atualizar sua branch quando necessário
+- Nunca trabalhar diretamente na `main`;
+- Sempre criar uma branch;
+- Criar um Pull Request;
+- Aguardar aprovação;
+- Atualizar sua branch quando necessário.
 
-## Participantes
-
-
+## 👥 Participantes
