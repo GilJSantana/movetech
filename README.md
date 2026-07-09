@@ -13,5 +13,6 @@ Regras:
 - Atualizar sua branch quando necessário
 
 ## Participantes
+- [Paulo Sorrentino](https://github.com/paulo-sorrentino)
 
 
