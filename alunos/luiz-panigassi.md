@@ -1,3 +1,3 @@
 Cidade: São Paulo
 
-Linguagem favorita: C++
+Linguagem favorita: C++/C
