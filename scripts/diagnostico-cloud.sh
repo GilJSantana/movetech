@@ -1,41 +1,32 @@
 #!/bin/bash
 
-echo "================================"
-echo " Diagnóstico de Ambiente Cloud "
-echo "================================"
+echo "========================================="
+echo " DIAGNÓSTICO DO AMBIENTE MAGALU CLOUD"
+echo "========================================="
 
-echo ""
-echo "Data da verificação:"
-date
-
-echo ""
-echo "Nome da máquina:"
-hostname
-
-echo ""
-echo "Sistema operacional:"
-cat /etc/os-release | grep PRETTY_NAME
-
-echo ""
-echo "Uso de disco:"
-df -h /
-
-echo ""
-echo "Memória:"
-free -h
-
-echo ""
-echo "Processos principais:"
-ps aux --sort=-%mem | head -6
-
-echo ""
-echo "Docker:"
-if command -v docker >/dev/null 2>&1
-then
-    docker --version
-else
-    echo "Docker não instalado"
+# Verifica se a CLI da Magalu Cloud está instalada
+if ! command -v mgc >/dev/null 2>&1; then
+    echo "Erro: CLI da Magalu Cloud (mgc) não está instalada."
+    exit 1
 fi
 
-echo ""
-echo "Diagnóstico finalizado."
+echo
+echo "=== Informações do Sistema ==="
+echo "Data: $(date)"
+echo "Hostname: $(hostname)"
+echo "Sistema: $(uname -a)"
+
+echo
+echo "=== Uso de Disco ==="
+df -h
+
+echo
+echo "=== Memória ==="
+free -h
+
+echo
+echo "=== Instâncias da Magalu Cloud ==="
+mgc virtual-machine instances list
+
+echo
+echo "=== Fim do diagnóstico ==="
