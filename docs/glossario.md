@@ -1,21 +1,23 @@
-# Glossário Git
+# Glossário
+
+Termos comuns no uso de Git e GitHub.
 
 ## Commit
 
-Um **commit** é um registro de uma alteração feita no repositório. Ele salva um conjunto de mudanças com uma mensagem que descreve o que foi alterado, permitindo acompanhar o histórico do projeto e voltar a versões anteriores quando necessário.
+Registro de uma alteração no repositório. Cada commit tem um identificador único e uma mensagem que descreve a mudança.
 
 ## Branch
 
-Uma **branch** é uma ramificação do repositório usada para desenvolver novas funcionalidades, corrigir problemas ou testar mudanças sem afetar a versão principal do projeto. Normalmente, cada tarefa é desenvolvida em uma branch separada.
+Linha de desenvolvimento independente. Permite trabalhar em uma alteração sem afetar a branch principal.
 
 ## Merge
 
-Um **merge** é o processo de juntar alterações de uma branch em outra. Ele é usado, por exemplo, para incorporar uma funcionalidade desenvolvida em uma branch de trabalho à branch principal do projeto.
+Combinação das alterações de uma branch em outra.
 
 ## Clone
 
-Um **clone** é a cópia de um repositório remoto para a máquina local. O comando `git clone` baixa os arquivos, histórico de commits e configurações necessárias para trabalhar no projeto localmente.
+Cópia local de um repositório remoto, incluindo todo o histórico de versões.
 
 ## Pull Request
 
-Um **Pull Request** (PR) é uma solicitação para integrar alterações de uma branch em outra, geralmente usada para revisão de código antes de incorporar mudanças ao projeto principal.
+Solicitação para incorporar as alterações de uma branch em outra. Permite revisão e discussão antes do merge.
