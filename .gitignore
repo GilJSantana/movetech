@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# FinOps - protege a API Key da Magalu Cloud
+src/finops/.env
+
+# Python
+src/finops/__pycache__/

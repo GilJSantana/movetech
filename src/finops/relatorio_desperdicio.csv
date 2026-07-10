@@ -1,0 +1,3 @@
+resource_id,resource_name,resource_type,billed_cost,billing_period,motivo
+c09ee955-44ae-49bb-bbb1-f622c04ef488,k8s-bash-comme-mgk-monitoring-prometheus-service-567a0,load_balancer,0.05,2026-07,Load balancer com backend configurado mas sem nenhuma instancia (target) recebendo trafego
+030a115d-fe52-493f-a4b0-5c701e5b160a,k8s-bash-comme-mgk-monitoring-prometheus-service-78c05,load_balancer,0.05,2026-07,Load balancer com backend configurado mas sem nenhuma instancia (target) recebendo trafego
