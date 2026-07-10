@@ -52,3 +52,5 @@ flowchart TD
     M2 --> M3[Sincronizar ambiente local]
     M3 --> END([Fim])
 ```
+## Um fluxo de trabalho (workflow) de Git:
+ É o conjunto de boas práticas que uma equipe segue para escrever e organizar código usando o Git e plataformas como o GitHub ou GitLab. Ele dita como as alterações são isoladas, revisadas e unificadas sem quebrar o projeto principal.
