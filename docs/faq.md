@@ -48,3 +48,8 @@ Estes comandos são importantes para sincronizar o seu repositório local com o 
 * `git pull` baixa as alterações e tenta integrá-las automaticamente ao branch em que você está trabalhando.
 
 **Metáfora:** Imagine que seus amigos atualizaram um documento compartilhado. O `git fetch` é como baixar a versão mais recente para ler depois. O `git pull` é como baixar essa versão e já substituir automaticamente a que você estava usando.
+
+## O que é o Merge?
+O Merge (em português, mescla ou fusão) é a ação técnica de costurar duas linhas do tempo separadas no Git. Ele pega todos os commits e os une matematicamente com a ramificação de destino.
+## Para que serve o Merge?
+Em um ecossistema focado em automação e infraestrutura, o Merge serve para oficializar o código. Ele pega o que era apenas um rascunho ou uma proposta de melhoria e injeta na base de código da equipe. No momento em que o Merge ocorre, a sua modificação deixa de ser uma ilha isolada e passa a integrar a versão mais recente do projeto, ficando disponível para todos os outros participantes assim que eles executarem o comando git pull.

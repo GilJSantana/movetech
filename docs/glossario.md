@@ -21,3 +21,6 @@ Cópia local de um repositório remoto, incluindo todo o histórico de versões.
 ## Pull Request
 
 Solicitação para incorporar as alterações de uma branch em outra. Permite revisão e discussão antes do merge.
+
+**Fork**
+Uma cópia exata de um repositório, criada na sua própria conta. Serve como uma ponte de segurança, permitindo que faça modificações num projeto sem afetar a infraestrutura original, até que as alterações sejam formalmente integradas via Pull Request.
