@@ -1,96 +1,144 @@
-name: CI/CD - Provisionamento e Publicação Magalu Cloud
+name: CI/CD - Build e Publicação na Magalu Cloud
 
 on:
   push:
-    branches: [ "feature/container_registry" ] # Altere para disparar o gatilho
+    branches:
+      # Branch temporária usada para validar a publicação no Container Registry.
+      # Após a validação, substitua por: developer
+      - feature/container_registry
   pull_request:
-    branches: [ "developer" ]
+    branches:
+      - developer
+
+permissions:
+  contents: read
 
 env:
-  # Nome do registry que deve existir ou ser criado na Magalu Cloud
-  REGISTRY_NAME: "bash-commerce-registry"
-  # Região padrão adotada no projeto (ex: br-se1 ou br-ne1)
-  MGC_REGION: "br-se1" 
+  MGC_REGION: br-se1
+  REGISTRY_NAME: cr_git_hub
+  IMAGE_NAME: bash-commerce
+  BUILD_CONTEXT: ./src/bash_container_registry
+  DOCKERFILE_PATH: ./src/bash_container_registry/Dockerfile
 
 jobs:
-  infra-and-deploy:
-    name: Validar Infraestrutura e Publicar Imagem
+  build-and-publish:
+    name: Validar, construir e publicar imagem
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout do Código
-      uses: actions/checkout@v4
+      - name: Checkout do código
+        uses: actions/checkout@v4
 
-    # ==============================================================================
-    # ETAPA 1: INSTALAÇÃO E CONFIGURAÇÃO DA CLI DA MAGALU CLOUD (mgc)
-    # ==============================================================================
-    - name: Instalar Magalu Cloud CLI (mgc)
-      run: |
-        echo "Buscando o binário oficial da CLI mgc para Linux AMD64..."
-        # Baixa diretamente o pacote compilado oficial (tar.gz)
-        curl -sSfL "https://storage.googleapis.com/mgc-cli/mgc-cli_latest_linux_amd64.tar.gz" -o mgc-cli.tar.gz
-        
-        echo "Descompactando o binário..."
-        tar -xzf mgc-cli.tar.gz mgc
-        
-        echo "Movendo para o diretório de execução global..."
-        sudo mv ./mgc /usr/local/bin/
-        
-        echo "Limpando arquivos temporários..."
-        rm mgc-cli.tar.gz
-        
-        echo "Validando versão instalada:"
-        mgc --version
+      - name: Definir endereço da imagem
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
 
-    - name: Autenticar e Configurar a CLI mgc
-      run: |
-        mgc auth login --api-key "${{ secrets.MGC_API_KEY }}"
-        mgc configure set region "${{ env.MGC_REGION }}"
+          REGISTRY_HOST="container-registry.${MGC_REGION}.magalu.cloud"
+          IMAGE_REPOSITORY="${REGISTRY_HOST}/${REGISTRY_NAME}/${IMAGE_NAME}"
 
+          echo "registry_host=${REGISTRY_HOST}" >> "$GITHUB_OUTPUT"
+          echo "image_repository=${IMAGE_REPOSITORY}" >> "$GITHUB_OUTPUT"
 
-    # ==============================================================================
-    # ETAPA 2: VERIFICAÇÃO DINÂMICA (IDEMPOTÊNCIA) DO REGISTRY
-    # ==============================================================================
-    - name: Verificar ou Criar Container Registry
-      run: |
-        echo "Buscando repositórios existentes no Container Registry..."
-        
-        # Armazena a lista de registries. Se falhar por estar vazio, ignora o erro do grep
-        REGISTRY_EXISTS=$(mgc container-registry registries list | grep -w "${{ env.REGISTRY_NAME }}" || true)
-        
-        if [ -z "$REGISTRY_EXISTS" ]; then
-          echo "⚠️ O recurso '${{ env.REGISTRY_NAME }}' não foi encontrado."
-          echo "🚀 Inicializando provisionamento automático do Container Registry..."
-          mgc container-registry registries create --name="${{ env.REGISTRY_NAME }}"
-          echo "✅ Container Registry criado com sucesso!"
-          # Tempo de propagação DNS/IAM mínimo da API de nuvem
-          sleep 10
-        else
-          echo "✅ O recurso '${{ env.REGISTRY_NAME }}' já existe na conta. Pulando criação."
-        fi
+          echo "Registry: ${REGISTRY_HOST}"
+          echo "Imagem: ${IMAGE_REPOSITORY}"
 
-    # ==============================================================================
-    # ETAPA 3: COMPILAÇÃO E PUBLICAÇÃO DO CONTAINER (DOCKER)
-    # ==============================================================================
-    - name: Configurar Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Validar estrutura do projeto
+        shell: bash
+        run: |
+          set -euo pipefail
 
-    - name: Autenticar no Docker Engine Registry
-      uses: docker/login-action@v3
-      with:
-        registry: container-registry.${{ env.MGC_REGION }}.magalu.cloud
-        username: ${{ secrets.MAGALU_REGISTRY_USERNAME }}
-        password: ${{ secrets.MAGALU_REGISTRY_PASSWORD }}
+          if [[ ! -d "$BUILD_CONTEXT" ]]; then
+            echo "::error::Contexto de build não encontrado: $BUILD_CONTEXT"
+            exit 1
+          fi
 
-    - name: Construir e Enviar Imagem OCI
-      uses: docker/build-push-action@v6
-      with:
-        # Aponta para a subpasta específica informada na sua estrutura de diretórios
-        context: ./move-tech/src/bash_container_registry
-        file: ./move-tech/src/bash_container_registry/Dockerfile
-        push: true
-        tags: |
-          container-registry.${{ env.MGC_REGION }}.magalu.cloud/${{ env.REGISTRY_NAME }}/bash-commerce:latest
-          container-registry.${{ env.MGC_REGION }}.magalu.cloud/${{ env.REGISTRY_NAME }}/bash-commerce:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+          if [[ ! -f "$DOCKERFILE_PATH" ]]; then
+            echo "::error::Dockerfile não encontrado: $DOCKERFILE_PATH"
+            exit 1
+          fi
+
+          echo "Estrutura do projeto validada."
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Gerar tags e metadados da imagem
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.image_repository }}
+          tags: |
+            # Última imagem publicada pelo fluxo.
+            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
+            # Nome da branch sanitizado automaticamente.
+            # feature/container_registry se torna feature-container_registry.
+            type=ref,event=branch
+            # Tag imutável para rastreabilidade e rollback.
+            type=sha,format=long
+
+      # Estas são as credenciais específicas do Container Registry.
+      # Elas não são a API Key utilizada pela CLI mgc.
+      - name: Validar credenciais do Container Registry
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          REGISTRY_USERNAME: ${{ secrets.MAGALU_REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.MAGALU_REGISTRY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${REGISTRY_USERNAME:-}" ]]; then
+            echo "::error::O secret MAGALU_REGISTRY_USERNAME não está configurado ou está vazio."
+            exit 1
+          fi
+
+          if [[ -z "${REGISTRY_PASSWORD:-}" ]]; then
+            echo "::error::O secret MAGALU_REGISTRY_PASSWORD não está configurado ou está vazio."
+            exit 1
+          fi
+
+          echo "Credenciais do Container Registry encontradas."
+
+      - name: Autenticar no Container Registry da Magalu Cloud
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.image.outputs.registry_host }}
+          username: ${{ secrets.MAGALU_REGISTRY_USERNAME }}
+          password: ${{ secrets.MAGALU_REGISTRY_PASSWORD }}
+
+      - name: Construir e publicar imagem OCI
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.BUILD_CONTEXT }}
+          file: ${{ env.DOCKERFILE_PATH }}
+          # Pull requests validam o build sem publicar a imagem.
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Resumo da publicação
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          IMAGE_TAGS: ${{ steps.metadata.outputs.tags }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Imagem publicada na Magalu Cloud"
+            echo
+            echo "### Tags"
+            while IFS= read -r tag; do
+              [[ -n "$tag" ]] && echo "- \`$tag\`"
+            done <<< "$IMAGE_TAGS"
+            echo
+            echo "### Digest"
+            echo "- \`${IMAGE_DIGEST}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
