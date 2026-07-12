@@ -1,0 +1,96 @@
+name: CI/CD - Provisionamento e Publicação Magalu Cloud
+
+on:
+  push:
+    branches: [ "feature/container_registry" ] # Altere para disparar o gatilho
+  pull_request:
+    branches: [ "developer" ]
+
+env:
+  # Nome do registry que deve existir ou ser criado na Magalu Cloud
+  REGISTRY_NAME: "bash-commerce-registry"
+  # Região padrão adotada no projeto (ex: br-se1 ou br-ne1)
+  MGC_REGION: "br-se1" 
+
+jobs:
+  infra-and-deploy:
+    name: Validar Infraestrutura e Publicar Imagem
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout do Código
+      uses: actions/checkout@v4
+
+    # ==============================================================================
+    # ETAPA 1: INSTALAÇÃO E CONFIGURAÇÃO DA CLI DA MAGALU CLOUD (mgc)
+    # ==============================================================================
+    - name: Instalar Magalu Cloud CLI (mgc)
+      run: |
+        echo "Buscando o binário oficial da CLI mgc para Linux AMD64..."
+        # Baixa diretamente o pacote compilado oficial (tar.gz)
+        curl -sSfL "https://storage.googleapis.com/mgc-cli/mgc-cli_latest_linux_amd64.tar.gz" -o mgc-cli.tar.gz
+        
+        echo "Descompactando o binário..."
+        tar -xzf mgc-cli.tar.gz mgc
+        
+        echo "Movendo para o diretório de execução global..."
+        sudo mv ./mgc /usr/local/bin/
+        
+        echo "Limpando arquivos temporários..."
+        rm mgc-cli.tar.gz
+        
+        echo "Validando versão instalada:"
+        mgc --version
+
+    - name: Autenticar e Configurar a CLI mgc
+      run: |
+        mgc auth login --api-key "${{ secrets.MGC_API_KEY }}"
+        mgc configure set region "${{ env.MGC_REGION }}"
+
+
+    # ==============================================================================
+    # ETAPA 2: VERIFICAÇÃO DINÂMICA (IDEMPOTÊNCIA) DO REGISTRY
+    # ==============================================================================
+    - name: Verificar ou Criar Container Registry
+      run: |
+        echo "Buscando repositórios existentes no Container Registry..."
+        
+        # Armazena a lista de registries. Se falhar por estar vazio, ignora o erro do grep
+        REGISTRY_EXISTS=$(mgc container-registry registries list | grep -w "${{ env.REGISTRY_NAME }}" || true)
+        
+        if [ -z "$REGISTRY_EXISTS" ]; then
+          echo "⚠️ O recurso '${{ env.REGISTRY_NAME }}' não foi encontrado."
+          echo "🚀 Inicializando provisionamento automático do Container Registry..."
+          mgc container-registry registries create --name="${{ env.REGISTRY_NAME }}"
+          echo "✅ Container Registry criado com sucesso!"
+          # Tempo de propagação DNS/IAM mínimo da API de nuvem
+          sleep 10
+        else
+          echo "✅ O recurso '${{ env.REGISTRY_NAME }}' já existe na conta. Pulando criação."
+        fi
+
+    # ==============================================================================
+    # ETAPA 3: COMPILAÇÃO E PUBLICAÇÃO DO CONTAINER (DOCKER)
+    # ==============================================================================
+    - name: Configurar Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Autenticar no Docker Engine Registry
+      uses: docker/login-action@v3
+      with:
+        registry: container-registry.${{ env.MGC_REGION }}.magalu.cloud
+        username: ${{ secrets.MAGALU_REGISTRY_USERNAME }}
+        password: ${{ secrets.MAGALU_REGISTRY_PASSWORD }}
+
+    - name: Construir e Enviar Imagem OCI
+      uses: docker/build-push-action@v6
+      with:
+        # Aponta para a subpasta específica informada na sua estrutura de diretórios
+        context: ./move-tech/src/bash_container_registry
+        file: ./move-tech/src/bash_container_registry/Dockerfile
+        push: true
+        tags: |
+          container-registry.${{ env.MGC_REGION }}.magalu.cloud/${{ env.REGISTRY_NAME }}/bash-commerce:latest
+          container-registry.${{ env.MGC_REGION }}.magalu.cloud/${{ env.REGISTRY_NAME }}/bash-commerce:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
