@@ -13,5 +13,5 @@ Todos os participantes trabalharão neste mesmo repositório utilizando o fluxo 
 
 ## 👥 Participantes
 - Elbia Simone Buglio
-- [Luis Borges](https://github.com/paulo-sorrentino)
+- [Luis Borges](https://github.com/luis-borges)
 - [Paulo Sorrentino](https://github.com/paulo-sorrentino)
